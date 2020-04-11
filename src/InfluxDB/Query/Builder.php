@@ -17,11 +17,11 @@ use InfluxDB\ResultSet;
  *
  * $series->select('*')->from('*')->getResult();
  *
- * @todo add inner join
- * @todo add merge
+ * @todo    add inner join
+ * @todo    add merge
  *
  * @package InfluxDB\Query
- * @author Stephen "TheCodeAssassin" Hoogendijk <s.hoogendijk@tech.leaseweb.com>
+ * @author  Stephen "TheCodeAssassin" Hoogendijk <s.hoogendijk@tech.leaseweb.com>
  */
 class Builder
 {
@@ -38,7 +38,7 @@ class Builder
     /**
      * @var string[]
      */
-    protected $where = array();
+    protected $where = [];
 
     /**
      * @var string
@@ -81,7 +81,12 @@ class Builder
     protected $orderBy;
 
     /**
-     * @param Database $db
+     * @var string
+     */
+    protected $fill;
+
+    /**
+     * @param  Database  $db
      */
     public function __construct(Database $db)
     {
@@ -89,7 +94,7 @@ class Builder
     }
 
     /**
-     * @param  string $metric The metric to select (required)
+     * @param  string  $metric  The metric to select (required)
      * @return $this
      */
     public function from($metric)
@@ -106,7 +111,7 @@ class Builder
      *
      * $series->select('sum(value)',
      *
-     * @param  string $customSelect
+     * @param  string  $customSelect
      * @return $this
      */
     public function select($customSelect)
@@ -117,7 +122,7 @@ class Builder
     }
 
     /**
-     * @param array $conditions
+     * @param  array  $conditions
      *
      * Example: array('time > now()', 'time < now() -1d');
      *
@@ -133,7 +138,7 @@ class Builder
     }
 
     /**
-     * @param  string $field
+     * @param  string  $field
      * @return $this
      */
     public function count($field = 'type')
@@ -144,7 +149,7 @@ class Builder
     }
 
     /**
-     * @param  string $field
+     * @param  string  $field
      * @return $this
      */
     public function median($field = 'type')
@@ -155,7 +160,7 @@ class Builder
     }
 
     /**
-     * @param  string $field
+     * @param  string  $field
      * @return $this
      */
     public function mean($field = 'type')
@@ -166,7 +171,7 @@ class Builder
     }
 
     /**
-     * @param  string $field
+     * @param  string  $field
      * @return $this
      */
     public function sum($field = 'type')
@@ -177,7 +182,7 @@ class Builder
     }
 
     /**
-     * @param  string $field
+     * @param  string  $field
      * @return $this
      */
     public function first($field = 'type')
@@ -188,7 +193,7 @@ class Builder
     }
 
     /**
-     * @param  string $field
+     * @param  string  $field
      * @return $this
      */
     public function last($field = 'type')
@@ -198,13 +203,15 @@ class Builder
         return $this;
     }
 
-    public function groupBy($field = 'type') {
+    public function groupBy($field = 'type')
+    {
         $this->groupBy[] = $field;
 
         return $this;
     }
 
-    public function orderBy($field = 'type', $order = 'ASC') {
+    public function orderBy($field = 'type', $order = 'ASC')
+    {
         $this->orderBy[] = "$field $order";
 
         return $this;
@@ -213,22 +220,22 @@ class Builder
     /**
      * Set's the time range to select data from
      *
-     * @param  int $from
-     * @param  int $to
+     * @param  int  $from
+     * @param  int  $to
      * @return $this
      */
     public function setTimeRange($from, $to)
     {
         $fromDate = date('Y-m-d H:i:s', (int) $from);
-        $toDate = date('Y-m-d H:i:s', (int) $to);
+        $toDate   = date('Y-m-d H:i:s', (int) $to);
 
-        $this->where(array("time > '$fromDate'", "time < '$toDate'"));
+        $this->where(["time > '$fromDate'", "time < '$toDate'"]);
 
         return $this;
     }
 
     /**
-     * @param int $percentile Percentage to select (for example 95 for 95th percentile billing)
+     * @param  int  $percentile  Percentage to select (for example 95 for 95th percentile billing)
      *
      * @return $this
      */
@@ -242,7 +249,7 @@ class Builder
     /**
      * Limit the ResultSet to n records
      *
-     * @param int $count
+     * @param  int  $count
      *
      * @return $this
      */
@@ -256,7 +263,7 @@ class Builder
     /**
      * Offset the ResultSet to n records
      *
-     * @param int $count
+     * @param  int  $count
      *
      * @return $this
      */
@@ -270,13 +277,13 @@ class Builder
     /**
      * Add retention policy to query
      *
-     * @param string $rp
+     * @param  string  $rp
      *
      * @return $this
      */
     public function retentionPolicy($rp)
     {
-        $this->retentionPolicy =  $rp;
+        $this->retentionPolicy = $rp;
 
         return $this;
     }
@@ -292,12 +299,24 @@ class Builder
     /**
      * Gets the result from the database (builds the query)
      *
+     * @param  array  $params
      * @return ResultSet
      * @throws \Exception
      */
-    public function getResultSet()
+    public function getResultSet($params = [])
     {
-        return  $this->db->query($this->parseQuery());
+        return $this->db->query($this->parseQuery(), $params);
+    }
+
+    /**
+     * @param $value
+     * @return $this
+     */
+    public function fill($value)
+    {
+        $this->fill = $value;
+
+        return $this;
     }
 
     /**
@@ -313,7 +332,7 @@ class Builder
 
         $query = sprintf('SELECT %s FROM %s"%s"', $this->selection, $rp, $this->metric);
 
-        if (! $this->metric) {
+        if (!$this->metric) {
             throw new \InvalidArgumentException('No metric provided to from()');
         }
 
@@ -325,16 +344,16 @@ class Builder
             }
 
             $clause = $this->where[$i];
-            $query .= ' ' . $selection . ' ' . $clause;
+            $query  .= ' '.$selection.' '.$clause;
 
         }
 
         if (!empty($this->groupBy)) {
-            $query .= ' GROUP BY ' . implode(',', $this->groupBy);
+            $query .= ' GROUP BY '.implode(',', $this->groupBy);
         }
 
         if (!empty($this->orderBy)) {
-            $query .= ' ORDER BY ' . implode(',', $this->orderBy);
+            $query .= ' ORDER BY '.implode(',', $this->orderBy);
         }
 
         if ($this->limitClause) {
@@ -343,6 +362,10 @@ class Builder
 
         if ($this->offsetClause) {
             $query .= $this->offsetClause;
+        }
+
+        if (!is_null($this->fill)) {
+            $query .= " fill($this->fill)";
         }
 
         return $query;
